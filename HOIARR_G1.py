@@ -970,8 +970,7 @@ def display_executive_dashboard():
                     st.dataframe(unresolved_df_psg9[dashboard_expander_cols], use_container_width=True,
                                  hide_index=True,
                                  column_config=date_format_config)
-        st.markdown("---")
-        st.subheader("📈 แนวโน้มอุบัติการณ์รายเดือน")
+        st.markdown("---")        
 
         # เตรียมข้อมูล: จัดกลุ่มข้อมูลตามปี-เดือน แล้วนับจำนวน
         monthly_counts = df_filtered.copy()
