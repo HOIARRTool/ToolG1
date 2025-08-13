@@ -823,10 +823,10 @@ def display_executive_dashboard():
     st.sidebar.markdown("เลือกส่วนที่ต้องการแสดงผล:")
 
     analysis_options_list = [
-        "แดชบอร์ดสรุปภาพรวม", "Heatmap รายเดือน", "รายการ Sentinel Events",
+        "แดชบอร์ดสรุปภาพรวม", "Heatmap รายเดือน", "Sentinel Events & Top 10",
         "Risk Matrix (Interactive)", "กราฟสรุปอุบัติการณ์ (รายมิติ)",
         "Sankey: ภาพรวม", "Sankey: มาตรฐานสำคัญจำเป็นต่อความปลอดภัย 9 ข้อ",
-        "Scatter Plot & Top 10", "สรุปอุบัติการณ์ตาม Safety Goals", "วิเคราะห์ตามหมวดหมู่และสถานะการแก้ไข",
+        "สรุปอุบัติการณ์ตาม Safety Goals", "วิเคราะห์ตามหมวดหมู่และสถานะการแก้ไข",
         "Persistence Risk Index", "Early Warning: อุบัติการณ์ที่มีแนวโน้มสูงขึ้น", "บทสรุปสำหรับผู้บริหาร",
         "คุยกับ AI Assistant",
     ]
@@ -1080,7 +1080,7 @@ def display_executive_dashboard():
                     st.markdown("---")
                 except Exception as e:
                     st.error(f"เกิดข้อผิดพลาดในการสร้าง Heatmap สำหรับ '{display_name}': {e}")
-    elif selected_analysis == "รายการ Sentinel Events":
+    elif selected_analysis == "Sentinel Events & Top 10":
         st.markdown("<h4 style='color: #001f3f;'>รายการ Sentinel Events ที่ตรวจพบ</h4>", unsafe_allow_html=True)
         if 'sentinel_composite_keys' in globals() and sentinel_composite_keys and 'Sentinel code for check' in df_filtered.columns:
             sentinel_events = df_filtered[df_filtered['Sentinel code for check'].isin(sentinel_composite_keys)].copy()
@@ -1103,6 +1103,28 @@ def display_executive_dashboard():
                 st.info("ไม่พบ Sentinel Events ในช่วงเวลาที่เลือก")
         else:
             st.warning("ไม่สามารถตรวจสอบ Sentinel Events ได้ (ไฟล์ Sentinel2024.xlsx อาจไม่มีข้อมูล)")
+            
+
+        st.markdown("---")
+        st.subheader("Top 10 อุบัติการณ์ (ตามความถี่)")
+
+        if not df_freq.empty:
+            df_freq_top10 = df_freq.nlargest(10, 'count')
+            incident_names = df_filtered[['Incident', 'ชื่ออุบัติการณ์ความเสี่ยง']].drop_duplicates()
+            df_freq_top10 = pd.merge(df_freq_top10, incident_names, on='Incident', how='left')
+            st.dataframe(
+                df_freq_top10[['Incident', 'count']],
+                column_config={
+                    "Incident": "รหัส Incident",
+                    "count": "จำนวนครั้ง"
+                },
+                use_container_width=True,
+                hide_index=True
+            )
+        else:
+            st.warning("ไม่สามารถแสดง Top 10 อุบัติการณ์ได้")
+
+            
     elif selected_analysis == "Risk Matrix (Interactive)":
         st.subheader("Risk Matrix (Interactive)")
 
@@ -1532,49 +1554,6 @@ def display_executive_dashboard():
                     st.plotly_chart(fig_sankey_psg9_simplified, use_container_width=True)
                 else:
                     st.warning("ไม่สามารถสร้างลิงก์สำหรับ Sankey diagram (PSG9) ได้")
-
-    elif selected_analysis == "Scatter Plot & Top 10":
-        st.markdown("<h4 style='color: #001f3f;'>ความสัมพันธ์ระหว่างรหัสอุบัติการณ์และหมวดหมู่ (Scatter Plot)</h4>",
-                    unsafe_allow_html=True)
-
-        scatter_cols = ['รหัส', 'หมวด', 'Category Color', 'Incident Rate/mth']
-        if all(col in df_filtered.columns for col in scatter_cols):
-            df_sc = df_filtered.dropna(subset=scatter_cols, how='any')
-            if not df_sc.empty:
-                fig_sc = px.scatter(
-                    df_sc,
-                    x='รหัส',
-                    y='หมวด',
-                    color='Category Color',
-                    size='Incident Rate/mth',
-                    hover_data=['Incident', 'ชื่ออุบัติการณ์ความเสี่ยง'],
-                    size_max=30
-                )
-                st.plotly_chart(fig_sc, theme="streamlit", use_container_width=True)
-            else:
-                st.info("ไม่มีข้อมูลเพียงพอสำหรับสร้าง Scatter Plot ในช่วงเวลาที่เลือก")
-        else:
-            st.warning(f"ไม่พบคอลัมน์ที่จำเป็นสำหรับ Scatter Plot: {', '.join(scatter_cols)}")
-
-        st.markdown("---")
-        st.subheader("Top 10 อุบัติการณ์ (ตามความถี่)")
-
-        if not df_freq.empty:
-            df_freq_top10 = df_freq.nlargest(10, 'count')
-            incident_names = df_filtered[['Incident', 'ชื่ออุบัติการณ์ความเสี่ยง']].drop_duplicates()
-            df_freq_top10 = pd.merge(df_freq_top10, incident_names, on='Incident', how='left')
-            st.dataframe(
-                df_freq_top10[['Incident', 'count']],
-                column_config={
-                    "Incident": "รหัส Incident",
-                    "count": "จำนวนครั้ง"
-                },
-                use_container_width=True,
-                hide_index=True
-            )
-        else:
-            st.warning("ไม่สามารถแสดง Top 10 อุบัติการณ์ได้")
-
     elif selected_analysis == "สรุปอุบัติการณ์ตาม Safety Goals":
         st.markdown("<h4 style='color: #001f3f;'>สรุปอุบัติการณ์ตามเป้าหมาย (Safety Goals)</h4>",
                     unsafe_allow_html=True)
