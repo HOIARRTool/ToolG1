@@ -148,5 +148,6 @@ xlrd==2.0.1
 xlsxwriter==3.2.5
 zipp==3.23.0
 zopfli==0.2.3.post1
-statsmodels
+statsmodels==0.14.1
+
 
