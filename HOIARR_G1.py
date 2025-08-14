@@ -1018,7 +1018,49 @@ def display_executive_dashboard():
         )
         fig_trend.update_traces(line=dict(width=3))
         st.plotly_chart(fig_trend, use_container_width=True)
+    elif selected_analysis == "Heatmap รายเดือน":
+        st.markdown("<h4 style='color: #001f3f;'>Heatmap: จำนวนอุบัติการณ์รายเดือน</h4>", unsafe_allow_html=True)
+        st.info(
+            "💡 Heatmap นี้แสดงความถี่ของการเกิดอุบัติการณ์แต่ละรหัสในแต่ละเดือน สีที่เข้มกว่าหมายถึงจำนวนครั้งที่เกิดสูงกว่า ช่วยให้มองเห็นรูปแบบหรืออุบัติการณ์ที่เกิดบ่อยในช่วงเวลาต่างๆ ได้ง่ายขึ้น")
 
+        st.markdown("<h5 style='color: #003366;'>ภาพรวมอุบัติการณ์ทั้งหมด (เลือกจำนวนที่แสดงได้)</h5>",
+                    unsafe_allow_html=True)
+        heatmap_req_cols = ['รหัส', 'เดือน', 'ชื่ออุบัติการณ์ความเสี่ยง', 'Month', 'หมวด']
+        if not all(col in df_filtered.columns for col in heatmap_req_cols):
+            st.warning(f"ไม่สามารถสร้าง Heatmap ได้ เนื่องจากขาดคอลัมน์ที่จำเป็น: {', '.join(heatmap_req_cols)}")
+        else:
+            df_heat = df_filtered.copy()
+            df_heat['incident_label'] = df_heat['รหัส'] + " | " + df_heat['ชื่ออุบัติการณ์ความเสี่ยง'].fillna('')
+
+            total_counts = df_heat['incident_label'].value_counts().reset_index()
+            total_counts.columns = ['incident_label', 'total_count']
+
+            top_n = st.slider(
+                "เลือกจำนวนอุบัติการณ์ (ตามความถี่) ที่ต้องการแสดงบน Heatmap รวม:",
+                min_value=5, max_value=min(50, len(total_counts)),
+                value=min(20, len(total_counts)), step=5, key="top_n_slider"
+            )
+            top_incident_labels = total_counts.nlargest(top_n, 'total_count')['incident_label']
+            df_heat_filtered_view = df_heat[df_heat['incident_label'].isin(top_incident_labels)]
+            try:
+                heatmap_pivot = pd.pivot_table(df_heat_filtered_view, values='Incident', index='incident_label',
+                                               columns='เดือน', aggfunc='count', fill_value=0)
+                sorted_month_names = [v for k, v in sorted(month_label.items())]
+                available_months = [m for m in sorted_month_names if m in heatmap_pivot.columns]
+                if available_months:
+                    heatmap_pivot = heatmap_pivot[available_months]
+                    heatmap_pivot = heatmap_pivot.reindex(top_incident_labels).dropna()
+                    if not heatmap_pivot.empty:
+                        fig_heatmap = px.imshow(heatmap_pivot,
+                                                labels=dict(x="เดือน", y="อุบัติการณ์", color="จำนวนครั้ง"),
+                                                text_auto=True, aspect="auto", color_continuous_scale='Reds')
+                        fig_heatmap.update_layout(title_text=f"Heatmap ของอุบัติการณ์ Top {top_n} ที่เกิดบ่อยที่สุด",
+                                                  height=max(600, len(heatmap_pivot.index) * 25), xaxis_title="เดือน",
+                                                  yaxis_title="รหัส | ชื่ออุบัติการณ์")
+                        fig_heatmap.update_xaxes(side="top")
+                        st.plotly_chart(fig_heatmap, use_container_width=True)
+            except Exception as e:
+                st.error(f"เกิดข้อผิดพลาดในการสร้าง Heatmap รวม: {e}")
             st.markdown("---")
 
             st.markdown("<h5 style='color: #003366;'>Heatmap แยกตามเป้าหมายความปลอดภัย (Safety Goal)</h5>",
