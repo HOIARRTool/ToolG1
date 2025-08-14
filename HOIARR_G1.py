@@ -979,6 +979,33 @@ def display_executive_dashboard():
         incident_trend = monthly_counts.groupby('เดือน-ปี').size().reset_index(name='จำนวนอุบัติการณ์')
         incident_trend = incident_trend.sort_values(by='เดือน-ปี')
 
+        st.markdown("---")
+        total_incidents = metrics_data.get('total_processed_incidents', 0)
+        resolved_incidents = df_filtered[~df_filtered['Resulting Actions'].astype(str).isin(['None', '', 'nan'])].shape[
+            0]
+        status_data = pd.DataFrame({
+            'สถานะ': ['อุบัติการณ์ทั้งหมด', 'ที่แก้ไขแล้ว'],
+            'จำนวน': [total_incidents, resolved_incidents]
+        })
+        fig_status = px.bar(
+            status_data,
+            x='จำนวน',
+            y='สถานะ',
+            orientation='h',
+            title='ภาพรวมอุบัติการณ์ทั้งหมดเทียบกับที่แก้ไขแล้ว',
+            text='จำนวน',
+            color='สถานะ',
+            color_discrete_map={
+                'อุบัติการณ์ทั้งหมด': '#1f77b4',  # สีน้ำเงิน
+                'ที่แก้ไขแล้ว': '#2ca02c'  # สีเขียว
+            },
+            labels={'สถานะ': '', 'จำนวน': 'จำนวนอุบัติการณ์'}
+        )
+        fig_status.update_layout(
+            yaxis={'categoryorder': 'total ascending'},
+            showlegend=False
+        )
+        st.plotly_chart(fig_status, use_container_width=True)
         # สร้างกราฟเส้น
         fig_trend = px.line(
             incident_trend,
