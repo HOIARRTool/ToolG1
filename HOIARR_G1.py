@@ -868,7 +868,7 @@ def display_executive_dashboard():
             st.rerun()
     st.sidebar.markdown("---")
     st.sidebar.markdown(f"""
-                      *กิตติกรรมประกาศ:* ขอขอบพระคุณ 
+                      *กิตติกรรมประกาศ:*  
                       - Prof. Shin Ushiro
                       - นพ.อนุวัฒน์ ศุภชุติกุล 
                       - นพ.ก้องเกียรติ เกษเพ็ชร์ 
